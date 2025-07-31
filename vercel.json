@@ -1,14 +1,24 @@
 {
   "builds": [
     {
-      "src": "api/app.py",
+      "src": "app.py",
       "use": "@vercel/python"
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "api/app.py"
+      "dest": "app.py"
     }
-  ]
+  ],
+  "env": {
+    "SECRET_KEY": "@secret-key",
+    "FIREBASE_PROJECT_ID": "@firebase-project-id",
+    "FIREBASE_PRIVATE_KEY_ID": "@firebase-private-key-id",
+    "FIREBASE_PRIVATE_KEY": "@firebase-private-key",
+    "FIREBASE_CLIENT_EMAIL": "@firebase-client-email",
+    "FIREBASE_CLIENT_ID": "@firebase-client-id",
+    "FIREBASE_CLIENT_CERT_URL": "@firebase-client-cert-url",
+    "FIREBASE_STORAGE_BUCKET": "@firebase-storage-bucket"
+  }
 }
