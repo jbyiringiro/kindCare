@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Caregiver{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="h3 mb-0">Welcome back, {{ current_user.full_name }}!</h1>
+        <p class="text-muted">Here's an overview of your children's therapy progress</p>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card progress-card">
+            <div class="card-body text-center">
+                <i class="fas fa-child fa-2x mb-2"></i>
+                <h3>{{ children|length }}</h3>
+                <p class="mb-0">Children</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card activity-card">
+            <div class="card-body text-center">
+                <i class="fas fa-clipboard-list fa-2x mb-2"></i>
+                <h3>{{ recent_logs|length }}</h3>
+                <p class="mb-0">Recent Logs</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card resource-card">
+            <div class="card-body text-center">
+                <i class="fas fa-chart-line fa-2x mb-2"></i>
+                <h3>Active</h3>
+                <p class="mb-0">Plans</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: white;">
+            <div class="card-body text-center">
+                <i class="fas fa-calendar-check fa-2x mb-2"></i>
+                <h3>Today</h3>
+                <p class="mb-0">Activities</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-bolt text-primary"></i> Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('add_child') }}" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-plus"></i> Add Child
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('log_progress') }}" class="btn btn-outline-success w-100">
+                            <i class="fas fa-chart-line"></i> Log Progress
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('send_message') }}" class="btn btn-outline-info w-100">
+                            <i class="fas fa-envelope"></i> Message Therapist
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('resources') }}" class="btn btn-outline-warning w-100">
+                            <i class="fas fa-book"></i> View Resources
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Children Overview and Recent Progress -->
+<div class="row">
+    <!-- Children List -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-child text-primary"></i> My Children
+                </h5>
+                <a href="{{ url_for('children') }}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body">
+                {% if children %}
+                    {% for child in children %}
+                    <div class="d-flex justify-content-between align-items-center mb-3 p-3 bg-light rounded">
+                        <div>
+                            <h6 class="mb-1">{{ child.name }}</h6>
+                            <small class="text-muted">Age: {{ child.age }} | {{ child.diagnosis }}</small>
+                        </div>
+                        <div>
+                            <a href="{{ url_for('therapy_plans') }}" class="btn btn-sm btn-outline-primary">
+                                View Plans
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-child fa-3x mb-3"></i>
+                        <p>No children added yet.</p>
+                        <a href="{{ url_for('add_child') }}" class="btn btn-primary">Add Your First Child</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Progress Logs -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-bar text-success"></i> Recent Progress
+                </h5>
+                <a href="{{ url_for('progress') }}" class="btn btn-sm btn-outline-success">View All</a>
+            </div>
+            <div class="card-body">
+                {% if recent_logs %}
+                    {% for log in recent_logs %}
+                    <div class="mb-3 p-3 border-start border-3 border-success bg-light">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="mb-1">{{ log.child.name }}</h6>
+                                <p class="mb-1 small">{{ log.notes }}</p>
+                                <small class="text-muted">
+                                    {{ log.date.strftime('%B %d, %Y') }} | 
+                                    Rating: 
+                                    {% for i in range(log.rating) %}
+                                        <i class="fas fa-star text-warning"></i>
+                                    {% endfor %}
+                                    {% for i in range(5 - log.rating) %}
+                                        <i class="far fa-star text-warning"></i>
+                                    {% endfor %}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-chart-line fa-3x mb-3"></i>
+                        <p>No progress logs yet.</p>
+                        <a href="{{ url_for('log_progress') }}" class="btn btn-success">Log First Progress</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Progress Chart -->
+{% if children %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-area text-info"></i> Progress Overview
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="progressChart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if children %}
+<script>
+    // Progress Chart
+    const ctx = document.getElementById('progressChart').getContext('2d');
+    
+    // Fetch progress data for first child (demo)
+    {% if children %}
+    fetch('/api/children/{{ children[0].id }}/progress')
+        .then(response => response.json())
+        .then(data => {
+            const chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.map(item => item.date),
+                    datasets: [{
+                        label: 'Progress Rating',
+                        data: data.map(item => item.rating),
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 5
+                        }
+                    }
+                }
+            });
+        });
+    {% endif %}
+</script>
+{% endif %}
+{% endblock %}

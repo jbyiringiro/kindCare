@@ -1,0 +1,392 @@
+{% extends "base.html" %}
+
+{% block title %}Therapy Plans{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>Therapy Plans</h2>
+            <p class="text-muted mb-0">Manage and track therapy plans for all children</p>
+        </div>
+        <div>
+            {% if current_user.role in ['therapist', 'admin'] %}
+            <a href="{{ url_for('create_therapy_plan') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i> Create New Plan
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Filters and Search -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-3">
+                    <label for="search" class="form-label">Search Plans</label>
+                    <input type="text" class="form-control" id="search" name="search" 
+                        placeholder="Search by title or description..." 
+                        value="{{ request.args.get('search', '') }}">
+                </div>
+                <div class="col-md-2">
+                    <label for="child_filter" class="form-label">Child</label>
+                    <select class="form-select" id="child_filter" name="child_id">
+                        <option value="">All Children</option>
+                        {% for child in children %}
+                        <option value="{{ child.id }}" 
+                            {% if request.args.get('child_id') == child.id|string %}selected{% endif %}>
+                            {{ child.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="therapy_type_filter" class="form-label">Therapy Type</label>
+                    <select class="form-select" id="therapy_type_filter" name="therapy_type">
+                        <option value="">All Types</option>
+                        <option value="aba" {% if request.args.get('therapy_type') == 'aba' %}selected{% endif %}>ABA</option>
+                        <option value="speech" {% if request.args.get('therapy_type') == 'speech' %}selected{% endif %}>Speech Therapy</option>
+                        <option value="occupational" {% if request.args.get('therapy_type') == 'occupational' %}selected{% endif %}>Occupational</option>
+                        <option value="social_skills" {% if request.args.get('therapy_type') == 'social_skills' %}selected{% endif %}>Social Skills</option>
+                        <option value="sensory" {% if request.args.get('therapy_type') == 'sensory' %}selected{% endif %}>Sensory</option>
+                        <option value="cognitive" {% if request.args.get('therapy_type') == 'cognitive' %}selected{% endif %}>Cognitive</option>
+                        <option value="play" {% if request.args.get('therapy_type') == 'play' %}selected{% endif %}>Play Therapy</option>
+                        <option value="other" {% if request.args.get('therapy_type') == 'other' %}selected{% endif %}>Other</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="status_filter" class="form-label">Status</label>
+                    <select class="form-select" id="status_filter" name="status">
+                        <option value="">All Statuses</option>
+                        <option value="active" {% if request.args.get('status') == 'active' %}selected{% endif %}>Active</option>
+                        <option value="completed" {% if request.args.get('status') == 'completed' %}selected{% endif %}>Completed</option>
+                        <option value="paused" {% if request.args.get('status') == 'paused' %}selected{% endif %}>Paused</option>
+                        <option value="draft" {% if request.args.get('status') == 'draft' %}selected{% endif %}>Draft</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="priority_filter" class="form-label">Priority</label>
+                    <select class="form-select" id="priority_filter" name="priority">
+                        <option value="">All Priorities</option>
+                        <option value="urgent" {% if request.args.get('priority') == 'urgent' %}selected{% endif %}>Urgent</option>
+                        <option value="high" {% if request.args.get('priority') == 'high' %}selected{% endif %}>High</option>
+                        <option value="medium" {% if request.args.get('priority') == 'medium' %}selected{% endif %}>Medium</option>
+                        <option value="low" {% if request.args.get('priority') == 'low' %}selected{% endif %}>Low</option>
+                    </select>
+                </div>
+                <div class="col-md-1 d-flex align-items-end">
+                    <button type="submit" class="btn btn-outline-primary me-2">Filter</button>
+                    <a href="{{ url_for('therapy_plans') }}" class="btn btn-outline-secondary">Clear</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Total Plans</h6>
+                            <h3>{{ total_plans or 0 }}</h3>
+                        </div>
+                        <i class="fas fa-clipboard-list fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Active Plans</h6>
+                            <h3>{{ active_plans_count or 0 }}</h3>
+                        </div>
+                        <i class="fas fa-play-circle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Completed</h6>
+                            <h3>{{ completed_plans_count or 0 }}</h3>
+                        </div>
+                        <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Due Soon</h6>
+                            <h3>{{ due_soon_count or 0 }}</h3>
+                        </div>
+                        <i class="fas fa-clock fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Therapy Plans List -->
+    {% if therapy_plans %}
+    <div class="row">
+        {% for plan in therapy_plans %}
+        <div class="col-md-6 mb-4">
+            <div class="card h-100 therapy-plan-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-0">{{ plan.title }}</h5>
+                        <small class="text-muted">{{ plan.child_name }} • {{ plan.therapy_type.replace('_', ' ').title() }}</small>
+                    </div>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('view_therapy_plan', id=plan.id) }}">
+                                <i class="fas fa-eye me-2"></i> View Details
+                            </a></li>
+                            {% if current_user.role in ['therapist', 'admin'] %}
+                            <li><a class="dropdown-item" href="{{ url_for('edit_therapy_plan', id=plan.id) }}">
+                                <i class="fas fa-edit me-2"></i> Edit Plan
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('duplicate_therapy_plan', id=plan.id) }}">
+                                <i class="fas fa-copy me-2"></i> Duplicate
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="#" onclick="deletePlan({{ plan.id }})">
+                                <i class="fas fa-trash me-2"></i> Delete
+                            </a></li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    <!-- Plan Status and Priority -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="badge 
+                            {% if plan.status == 'active' %}bg-success
+                            {% elif plan.status == 'completed' %}bg-primary
+                            {% elif plan.status == 'paused' %}bg-warning
+                            {% else %}bg-secondary{% endif %}">
+                            {{ plan.status.title() }}
+                        </span>
+                        <span class="badge 
+                            {% if plan.priority == 'urgent' %}bg-danger
+                            {% elif plan.priority == 'high' %}bg-warning
+                            {% elif plan.priority == 'medium' %}bg-info
+                            {% else %}bg-light text-dark{% endif %}">
+                            {{ plan.priority.title() }} Priority
+                        </span>
+                    </div>
+
+                    <!-- Plan Description -->
+                    <p class="card-text">
+                        {{ plan.description[:120] + '...' if plan.description and plan.description|length > 120 else plan.description or 'No description provided' }}
+                    </p>
+
+                    <!-- Plan Progress -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <small class="text-muted">Overall Progress</small>
+                            <small class="text-muted">{{ plan.progress_percentage or 0 }}%</small>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar 
+                                {% if (plan.progress_percentage or 0) >= 80 %}bg-success
+                                {% elif (plan.progress_percentage or 0) >= 60 %}bg-info
+                                {% elif (plan.progress_percentage or 0) >= 40 %}bg-warning
+                                {% else %}bg-danger{% endif %}" 
+                                role="progressbar" 
+                                style="width: {{ plan.progress_percentage or 0 }}%"
+                                aria-valuenow="{{ plan.progress_percentage or 0 }}" 
+                                aria-valuemin="0" 
+                                aria-valuemax="100">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Plan Goals -->
+                    <div class="mb-3">
+                        <h6 class="fw-bold">Goals ({{ plan.goals_count or 0 }})</h6>
+                        {% if plan.goals %}
+                        <ul class="list-unstyled mb-0">
+                            {% for goal in plan.goals[:2] %}
+                            <li class="mb-1">
+                                <i class="fas fa-target text-primary me-2"></i>
+                                <small>{{ goal[:60] + '...' if goal|length > 60 else goal }}</small>
+                            </li>
+                            {% endfor %}
+                            {% if plan.goals|length > 2 %}
+                            <li><small class="text-muted">+{{ plan.goals|length - 2 }} more goals</small></li>
+                            {% endif %}
+                        </ul>
+                        {% else %}
+                        <small class="text-muted">No goals defined</small>
+                        {% endif %}
+                    </div>
+
+                    <!-- Plan Timeline -->
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <small class="text-muted">Start Date</small><br>
+                            <strong>{{ plan.start_date.strftime('%Y-%m-%d') if plan.start_date else 'Not set' }}</strong>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">End Date</small><br>
+                            <strong>{{ plan.end_date.strftime('%Y-%m-%d') if plan.end_date else 'Ongoing' }}</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <small class="text-muted">
+                                {{ plan.sessions_per_week or 0 }} sessions/week • 
+                                {{ plan.session_duration or 0 }} min sessions
+                            </small>
+                        </div>
+                        <div class="btn-group" role="group">
+                            <a href="{{ url_for('view_therapy_plan', id=plan.id) }}" 
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{{ url_for('log_progress') }}?plan_id={{ plan.id }}" 
+                               class="btn btn-sm btn-outline-success">
+                                <i class="fas fa-plus"></i>
+                            </a>
+                            {% if current_user.role in ['therapist', 'admin'] %}
+                            <a href="{{ url_for('edit_therapy_plan', id=plan.id) }}" 
+                               class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if pagination %}
+    <nav aria-label="Therapy plans pagination" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if pagination.has_prev %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('therapy_plans', page=pagination.prev_num, **request.args) }}">Previous</a>
+            </li>
+            {% endif %}
+            
+            {% for page_num in pagination.iter_pages() %}
+                {% if page_num %}
+                    {% if page_num != pagination.page %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('therapy_plans', page=page_num, **request.args) }}">{{ page_num }}</a>
+                    </li>
+                    {% else %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ page_num }}</span>
+                    </li>
+                    {% endif %}
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">...</span>
+                </li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if pagination.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('therapy_plans', page=pagination.next_num, **request.args) }}">Next</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+
+    {% else %}
+    <!-- No Plans Found -->
+    <div class="text-center py-5">
+        <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+        <h5 class="text-muted">No Therapy Plans Found</h5>
+        <p class="text-muted">
+            {% if request.args.get('search') %}
+            No plans match your search criteria. Try adjusting your filters.
+            {% else %}
+            Create your first therapy plan to get started.
+            {% endif %}
+        </p>
+        {% if current_user.role in ['therapist', 'admin'] %}
+        <a href="{{ url_for('create_therapy_plan') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i> Create First Plan
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function deletePlan(planId) {
+    if (confirm('Are you sure you want to delete this therapy plan? This action cannot be undone.')) {
+        fetch(`/api/therapy-plans/${planId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error deleting therapy plan: ' + (data.message || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error deleting therapy plan');
+        });
+    }
+}
+</script>
+
+<style>
+.therapy-plan-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.therapy-plan-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.progress {
+    border-radius: 10px;
+}
+
+.badge {
+    font-size: 0.75rem;
+}
+
+.opacity-75 {
+    opacity: 0.75;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Therapist{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="h3 mb-0">Welcome, Dr. {{ current_user.full_name }}!</h1>
+        <p class="text-muted">Manage therapy plans and support families on their journey</p>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-clipboard-list fa-2x mb-2"></i>
+                <h3>{{ therapy_plans|length }}</h3>
+                <p class="mb-0">Active Plans</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-book fa-2x mb-2"></i>
+                <h3>{{ resources|length }}</h3>
+                <p class="mb-0">Resources Shared</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card bg-info text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-users fa-2x mb-2"></i>
+                <h3>{{ therapy_plans|map(attribute='child')|list|length }}</h3>
+                <p class="mb-0">Children Supported</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-calendar-check fa-2x mb-2"></i>
+                <h3>Today</h3>
+                <p class="mb-0">Appointments</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-bolt text-primary"></i> Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('create_therapy_plan') }}" class="btn btn-primary w-100">
+                            <i class="fas fa-plus"></i> Create Plan
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('upload_resource') }}" class="btn btn-success w-100">
+                            <i class="fas fa-upload"></i> Upload Resource
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('send_message') }}" class="btn btn-info w-100">
+                            <i class="fas fa-envelope"></i> Message Family
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('progress') }}" class="btn btn-warning w-100">
+                            <i class="fas fa-chart-bar"></i> View Progress
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Therapy Plans and Resources -->
+<div class="row">
+    <!-- Recent Therapy Plans -->
+    <div class="col-md-8 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-clipboard-list text-primary"></i> My Therapy Plans
+                </h5>
+                <a href="{{ url_for('therapy_plans') }}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body">
+                {% if therapy_plans %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Child</th>
+                                    <th>Plan Title</th>
+                                    <th>Status</th>
+                                    <th>Start Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for plan in therapy_plans[:5] %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-2" 
+                                                 style="width: 30px; height: 30px;">
+                                                <i class="fas fa-child text-white"></i>
+                                            </div>
+                                            {{ plan.child.name }}
+                                        </div>
+                                    </td>
+                                    <td>{{ plan.title }}</td>
+                                    <td>
+                                        <span class="badge bg-success">{{ plan.status.title() }}</span>
+                                    </td>
+                                    <td>{{ plan.start_date.strftime('%b %d, %Y') if plan.start_date else 'Not set' }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-clipboard-list fa-3x mb-3"></i>
+                        <p>No therapy plans created yet.</p>
+                        <a href="{{ url_for('create_therapy_plan') }}" class="btn btn-primary">Create Your First Plan</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Resources and Activity Feed -->
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-book text-success"></i> My Resources
+                </h5>
+                <a href="{{ url_for('resources') }}" class="btn btn-sm btn-outline-success">View All</a>
+            </div>
+            <div class="card-body">
+                {% if resources %}
+                    {% for resource in resources[:3] %}
+                    <div class="d-flex align-items-center mb-3 p-2 bg-light rounded">
+                        <div class="me-3">
+                            {% if resource.file_type == 'pdf' %}
+                                <i class="fas fa-file-pdf text-danger fa-2x"></i>
+                            {% elif resource.file_type == 'video' %}
+                                <i class="fas fa-video text-info fa-2x"></i>
+                            {% else %}
+                                <i class="fas fa-file text-primary fa-2x"></i>
+                            {% endif %}
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">{{ resource.title }}</h6>
+                            <small class="text-muted">{{ resource.category }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-upload fa-2x mb-3"></i>
+                        <p>No resources uploaded yet.</p>
+                        <a href="{{ url_for('upload_resource') }}" class="btn btn-success btn-sm">Upload Resource</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-pie text-info"></i> This Week
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6 mb-3">
+                        <div class="h4 text-primary">{{ therapy_plans|length }}</div>
+                        <small class="text-muted">Plans Active</small>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="h4 text-success">5</div>
+                        <small class="text-muted">New Messages</small>
+                    </div>
+                    <div class="col-6">
+                        <div class="h4 text-warning">12</div>
+                        <small class="text-muted">Progress Updates</small>
+                    </div>
+                    <div class="col-6">
+                        <div class="h4 text-info">3</div>
+                        <small class="text-muted">Resources Added</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

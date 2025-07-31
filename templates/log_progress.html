@@ -1,0 +1,357 @@
+{% extends "base.html" %}
+
+{% block title %}Log Progress{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">Log Progress Entry</h3>
+                    <small class="text-muted">Record therapy session outcomes and child progress</small>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('log_progress') }}">
+                        {{ form.hidden_tag() if form }}
+                        
+                        <!-- Session Information -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="child_id" class="form-label">Child *</label>
+                                <select class="form-select" id="child_id" name="child_id" required>
+                                    <option value="">Select a child...</option>
+                                    {% for child in children %}
+                                    <option value="{{ child.id }}">{{ child.name }} (Age: {{ child.age }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="session_date" class="form-label">Session Date *</label>
+                                <input type="date" class="form-control" id="session_date" name="session_date" 
+                                    value="{{ today }}" required>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="therapy_plan_id" class="form-label">Therapy Plan *</label>
+                                <select class="form-select" id="therapy_plan_id" name="therapy_plan_id" required>
+                                    <option value="">Select therapy plan...</option>
+                                    {% for plan in therapy_plans %}
+                                    <option value="{{ plan.id }}">{{ plan.title }} ({{ plan.therapy_type }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="session_duration" class="form-label">Session Duration (minutes) *</label>
+                                <input type="number" class="form-control" id="session_duration" name="session_duration" 
+                                    min="15" max="180" value="60" required>
+                            </div>
+                        </div>
+
+                        <!-- Goal Selection -->
+                        <div class="mb-3">
+                            <label for="goal" class="form-label">Primary Goal Worked On *</label>
+                            <select class="form-select" id="goal" name="goal" required>
+                                <option value="">Select a goal...</option>
+                                <!-- Goals will be populated via JavaScript based on selected therapy plan -->
+                            </select>
+                            <div class="form-text">Goals are loaded based on the selected therapy plan</div>
+                        </div>
+
+                        <!-- Progress Assessment -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="mb-0">Progress Assessment</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="progress_percentage" class="form-label">Progress Percentage *</label>
+                                        <input type="range" class="form-range" id="progress_percentage" name="progress_percentage" 
+                                            min="0" max="100" value="50" oninput="updateProgressValue(this.value)">
+                                        <div class="d-flex justify-content-between">
+                                            <small>0%</small>
+                                            <span id="progress-value" class="badge bg-primary">50%</span>
+                                            <small>100%</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="rating" class="form-label">Session Rating *</label>
+                                        <div class="rating-container">
+                                            <div class="star-rating">
+                                                {% for i in range(1, 6) %}
+                                                <span class="star" data-rating="{{ i }}" onclick="setRating({{ i }})">
+                                                    <i class="far fa-star"></i>
+                                                </span>
+                                                {% endfor %}
+                                            </div>
+                                            <input type="hidden" id="rating" name="rating" value="3" required>
+                                            <small class="form-text text-muted">Rate the overall session quality</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="achievement_level" class="form-label">Achievement Level</label>
+                                    <select class="form-select" id="achievement_level" name="achievement_level">
+                                        <option value="exceeded">Exceeded Expectations</option>
+                                        <option value="met" selected>Met Expectations</option>
+                                        <option value="partial">Partially Met</option>
+                                        <option value="below">Below Expectations</option>
+                                        <option value="no_progress">No Progress</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Activities Completed -->
+                        <div class="mb-4">
+                            <label class="form-label">Activities Completed</label>
+                            <div id="activities-container">
+                                <div class="activity-entry mb-3 p-3 border rounded">
+                                    <div class="row">
+                                        <div class="col-md-8 mb-2">
+                                            <input type="text" class="form-control" name="activity_names[]" 
+                                                placeholder="Activity name..." required>
+                                        </div>
+                                        <div class="col-md-4 mb-2">
+                                            <select class="form-select" name="activity_completion[]">
+                                                <option value="completed">Completed</option>
+                                                <option value="partial">Partially Completed</option>
+                                                <option value="attempted">Attempted</option>
+                                                <option value="refused">Child Refused</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-12">
+                                            <textarea class="form-control" name="activity_notes[]" rows="2" 
+                                                placeholder="Notes about this activity..."></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="add-activity">
+                                <i class="fas fa-plus me-1"></i> Add Activity
+                            </button>
+                        </div>
+
+                        <!-- Observations -->
+                        <div class="mb-3">
+                            <label for="observations" class="form-label">Behavioral Observations</label>
+                            <textarea class="form-control" id="observations" name="observations" rows="4" 
+                                placeholder="Record child's behavior, engagement level, mood, challenges, breakthroughs, etc."></textarea>
+                        </div>
+
+                        <!-- Challenges & Difficulties -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="challenges" class="form-label">Challenges Encountered</label>
+                                <textarea class="form-control" id="challenges" name="challenges" rows="3" 
+                                    placeholder="Any difficulties or obstacles during the session..."></textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="strategies_used" class="form-label">Strategies Used</label>
+                                <textarea class="form-control" id="strategies_used" name="strategies_used" rows="3" 
+                                    placeholder="Techniques and strategies employed..."></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Next Steps -->
+                        <div class="mb-3">
+                            <label for="next_steps" class="form-label">Recommendations for Next Session</label>
+                            <textarea class="form-control" id="next_steps" name="next_steps" rows="3" 
+                                placeholder="What should be focused on in the next session..."></textarea>
+                        </div>
+
+                        <!-- Additional Notes -->
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">Additional Notes</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="3" 
+                                placeholder="Any other relevant information..."></textarea>
+                        </div>
+
+                        <!-- Caregiver Communication -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="mb-0">Caregiver Communication</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="notify_caregiver" name="notify_caregiver" checked>
+                                    <label class="form-check-label" for="notify_caregiver">
+                                        Notify caregiver about this progress entry
+                                    </label>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="caregiver_message" class="form-label">Message for Caregiver</label>
+                                    <textarea class="form-control" id="caregiver_message" name="caregiver_message" rows="3" 
+                                        placeholder="Optional message to share with the caregiver..."></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="home_activities" class="form-label">Suggested Home Activities</label>
+                                    <textarea class="form-control" id="home_activities" name="home_activities" rows="3" 
+                                        placeholder="Activities the caregiver can do at home to reinforce learning..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('progress') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-1"></i> Back to Progress
+                            </a>
+                            <div>
+                                <button type="button" class="btn btn-outline-primary me-2" id="save-draft">
+                                    <i class="fas fa-save me-1"></i> Save as Draft
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-check me-1"></i> Log Progress
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set default rating
+    setRating(3);
+    
+    // Load goals when therapy plan changes
+    document.getElementById('therapy_plan_id').addEventListener('change', function() {
+        const planId = this.value;
+        const goalSelect = document.getElementById('goal');
+        
+        if (planId) {
+            fetch(`/api/therapy-plans/${planId}/goals`)
+                .then(response => response.json())
+                .then(data => {
+                    goalSelect.innerHTML = '<option value="">Select a goal...</option>';
+                    data.goals.forEach(goal => {
+                        goalSelect.innerHTML += `<option value="${goal}">${goal}</option>`;
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading goals:', error);
+                });
+        } else {
+            goalSelect.innerHTML = '<option value="">Select a goal...</option>';
+        }
+    });
+
+    // Add activity functionality
+    document.getElementById('add-activity').addEventListener('click', function() {
+        const container = document.getElementById('activities-container');
+        const activityEntry = document.createElement('div');
+        activityEntry.className = 'activity-entry mb-3 p-3 border rounded position-relative';
+        activityEntry.innerHTML = `
+            <button type="button" class="btn btn-sm btn-outline-danger position-absolute top-0 end-0 m-2 remove-activity">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="row">
+                <div class="col-md-8 mb-2">
+                    <input type="text" class="form-control" name="activity_names[]" placeholder="Activity name..." required>
+                </div>
+                <div class="col-md-4 mb-2">
+                    <select class="form-select" name="activity_completion[]">
+                        <option value="completed">Completed</option>
+                        <option value="partial">Partially Completed</option>
+                        <option value="attempted">Attempted</option>
+                        <option value="refused">Child Refused</option>
+                    </select>
+                </div>
+                <div class="col-md-12">
+                    <textarea class="form-control" name="activity_notes[]" rows="2" placeholder="Notes about this activity..."></textarea>
+                </div>
+            </div>
+        `;
+        container.appendChild(activityEntry);
+    });
+
+    // Remove activity functionality
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-activity')) {
+            const activityEntry = e.target.closest('.activity-entry');
+            if (document.querySelectorAll('.activity-entry').length > 1) {
+                activityEntry.remove();
+            }
+        }
+    });
+
+    // Set maximum date to today
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('session_date').max = today;
+});
+
+function updateProgressValue(value) {
+    document.getElementById('progress-value').textContent = value + '%';
+}
+
+function setRating(rating) {
+    document.getElementById('rating').value = rating;
+    const stars = document.querySelectorAll('.star');
+    
+    stars.forEach((star, index) => {
+        const icon = star.querySelector('i');
+        if (index < rating) {
+            icon.className = 'fas fa-star text-warning';
+        } else {
+            icon.className = 'far fa-star text-muted';
+        }
+    });
+}
+
+// Save as draft functionality
+document.getElementById('save-draft').addEventListener('click', function() {
+    const form = document.querySelector('form');
+    const formData = new FormData(form);
+    formData.append('is_draft', 'true');
+    
+    fetch(form.action, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Progress entry saved as draft');
+        } else {
+            alert('Error saving draft');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error saving draft');
+    });
+});
+</script>
+
+<style>
+.star-rating {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.star {
+    cursor: pointer;
+    margin-right: 0.25rem;
+}
+
+.star:hover i {
+    color: #ffc107 !important;
+}
+
+.rating-container {
+    text-align: center;
+}
+
+.activity-entry {
+    position: relative;
+}
+</style>
+{% endblock %}

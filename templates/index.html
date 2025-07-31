@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>kindCare Therapy Platform - Supporting Families Together</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .hero-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 100px 0;
+        }
+        .feature-card {
+            transition: transform 0.3s ease;
+            border: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+        .btn-custom {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-weight: 500;
+        }
+        .btn-custom:hover {
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+            color: white;
+        }
+        .stats-section {
+            background-color: #f8f9fa;
+            padding: 80px 0;
+        }
+        .testimonial-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top">
+        <div class="container">
+            <a class="navbar-brand fw-bold text-primary" href="#">
+                kindCare
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#features">Features</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#about">About</a>
+                    </li>
+                    <li class="nav-item ms-2">
+                        <a class="btn btn-outline-primary" href="{{ url_for('login') }}">Sign In</a>
+                    </li>
+                    <li class="nav-item ms-2">
+                        <a class="btn btn-custom" href="{{ url_for('register') }}">Get Started</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6">
+                    <h1 class="display-4 fw-bold mb-4">
+                        Supporting Child Therapy, <span class="text-warning">Together</span>
+                    </h1>
+                    <p class="lead mb-4">
+                        <span class="text-warning">kindCare</span> 
+                        is a web-based platform that empowers parents, caregivers, and therapists with tools to plan therapy 
+                        routines, access learning materials, and connect with a supportive community.
+                        <br><br>
+                        Designed for low-resource settings, it helps close the gap in early intervention, home care, and education.
+                    </p>
+                    <p class="display-6 text-warning mb-4">
+                        Every child can grow, learn, and thrive
+                    </p>
+                    <div class="d-flex flex-wrap gap-3">
+                        <a href="{{ url_for('register') }}" class="btn btn-light btn-lg px-4">
+                            <i class="fas fa-rocket"></i> Start Your Journey
+                        </a>
+                        <a href="#features" class="btn btn-outline-light btn-lg px-4">
+                            <i class="fas fa-play-circle"></i> Learn More
+                        </a>
+                    </div>
+                </div>
+                <div class="col-lg-6 text-center">
+                    <div class="position-relative">
+                        <i class="fas fa-users" style="font-size: 15rem; opacity: 0.1;"></i>
+                        <div class="position-absolute top-50 start-50 translate-middle">
+                            <i class="fas fa-heart text-warning" style="font-size: 4rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-5">
+        <div class="container">
+            <div class="row mb-5">
+                <div class="col-12 text-center">
+                    <h2 class="display-5 fw-bold mb-3">What kindCare Offers</h2>
+                    <p class="lead text-muted">Everything you need to support kindCare Therapy in one place</p>
+                </div>
+            </div>
+            
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="card feature-card h-100">
+                        <div class="card-body text-center p-4">
+                            <div class="bg-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                                 style="width: 80px; height: 80px;">
+                                <i class="fas fa-clipboard-list text-white fa-2x"></i>
+                            </div>
+                            <h4>Therapy Planning</h4>
+                            <p class="text-muted">Create personalized therapy plans with detailed activities and track progress over time.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card feature-card h-100">
+                        <div class="card-body text-center p-4">
+                            <div class="bg-success rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                                 style="width: 80px; height: 80px;">
+                                <i class="fas fa-chart-line text-white fa-2x"></i>
+                            </div>
+                            <h4>Progress Tracking</h4>
+                            <p class="text-muted">Log daily activities and visualize improvements with comprehensive charts and reports.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card feature-card h-100">
+                        <div class="card-body text-center p-4">
+                            <div class="bg-info rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                                 style="width: 80px; height: 80px;">
+                                <i class="fas fa-book text-white fa-2x"></i>
+                            </div>
+                            <h4>Resource Library</h4>
+                            <p class="text-muted">Access educational materials, videos, and guides created by therapy professionals.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card feature-card h-100">
+                        <div class="card-body text-center p-4">
+                            <div class="bg-warning rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                                 style="width: 80px; height: 80px;">
+                                <i class="fas fa-comments text-white fa-2x"></i>
+                            </div>
+                            <h4>Communication</h4>
+                            <p class="text-muted">Direct messaging between caregivers and therapists for seamless collaboration.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card feature-card h-100">
+                        <div class="card-body text-center p-4">
+                            <div class="bg-danger rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                                 style="width: 80px; height: 80px;">
+                                <i class="fas fa-users text-white fa-2x"></i>
+                            </div>
+                            <h4>Community Support</h4>
+                            <p class="text-muted">Connect with other families and share experiences in our supportive community forum.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card feature-card h-100">
+                        <div class="card-body text-center p-4">
+                            <div class="bg-dark rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                                 style="width: 80px; height: 80px;">
+                                <i class="fas fa-mobile-alt text-white fa-2x"></i>
+                            </div>
+                            <h4>Mobile Friendly</h4>
+                            <p class="text-muted">Access the platform anywhere, anytime with our mobile-optimized responsive design.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Statistics Section -- Future Work -->
+    <!-- <section class="stats-section">
+        <div class="container">
+            <div class="row text-center">
+                <div class="col-md-3 mb-4">
+                    <div class="h2 text-primary fw-bold">1000+</div>
+                    <p class="text-muted">Families Supported</p>
+                </div>
+                <div class="col-md-3 mb-4">
+                    <div class="h2 text-success fw-bold">500+</div>
+                    <p class="text-muted">Therapy Plans Created</p>
+                </div>
+                <div class="col-md-3 mb-4">
+                    <div class="h2 text-info fw-bold">200+</div>
+                    <p class="text-muted">Healthcare Professionals</p>
+                </div>
+                <div class="col-md-3 mb-4">
+                    <div class="h2 text-warning fw-bold">5000+</div>
+                    <p class="text-muted">Progress Entries Logged</p>
+                </div>
+            </div>
+        </div>
+    </section> -->
+
+    <!-- About Section -->
+    <section id="about" class="py-5 stats-section">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6 mb-4">
+                    <h2 class="display-6 fw-bold mb-4">Built for Rwanda, Designed for Impact</h2>
+                    <p class="lead mb-4">
+                        Our platform is specifically designed to address the unique challenges of Child Therapy in Rwanda and similar contexts, 
+                        considering local languages, cultural practices, and infrastructure limitations.
+                    </p>
+                    <div class="row">
+                        <div class="col-6 mb-3"
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <span>Multilingual Support</span>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <span>Low Bandwidth Optimized</span>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <span>Cultural Sensitivity</span>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <span>Community Health Worker Support</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6 text-center">
+                    <div class="testimonial-card">
+                        <i class="fas fa-quote-left text-primary fa-2x mb-3"></i>
+                        <p class="lead mb-4">
+                            "This platform has transformed how we support families dealing with autism. The progress tracking and communication features have made therapy more effective and accessible."
+                        </p>
+                        <div class="d-flex align-items-center justify-content-center">
+                            <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                 style="width: 50px; height: 50px;">
+                                <i class="fas fa-user text-white"></i>
+                            </div>
+                            <div>
+                                <div class="fw-bold">Dr. Sarah Mukamana</div>
+                                <small class="text-muted">Pediatric Therapist, Kigali</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Call to Action -->
+    <section class="py-5 bg-primary text-white">
+        <div class="container text-center">
+            <h2 class="display-6 fw-bold mb-4">Ready to Start Your Journey?</h2>
+            <p class="lead mb-4">Join thousands of families and therapists already using our platform</p>
+            <div class="d-flex flex-wrap justify-content-center gap-3">
+                <a href="{{ url_for('register') }}" class="btn btn-light btn-lg px-4">
+                    <i class="fas fa-user-plus"></i> Create Account
+                </a>
+                <a href="{{ url_for('login') }}" class="btn btn-outline-light btn-lg px-4">
+                    <i class="fas fa-sign-in-alt"></i> Sign In
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5 class="fw-bold">
+                        kindCare Therapy Platform
+                    </h5>
+                    <p class="text-muted">Supporting families and therapists in autism care journey.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <!-- <div class="d-flex justify-content-md-end gap-3">
+                        <a href="#" class="text-white"><i class="fab fa-facebook"></i></a>
+                        <a href="#" class="text-white"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="text-white"><i class="fab fa-instagram"></i></a>
+                        <a href="#" class="text-white"><i class="fab fa-linkedin"></i></a>
+                    </div> -->
+                    <small class="text-muted mt-2 d-block">© 2025 kindCare Therapy Platform. All rights reserved.</small>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

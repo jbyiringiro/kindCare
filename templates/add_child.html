@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Add Child - kindCare Therapy {% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title mb-0">
+                    <i class="fas fa-child text-primary"></i> Add Child Profile
+                </h4>
+                <p class="text-muted mb-0">Add your child's information to begin their therapy journey</p>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="name" class="form-label">Child's Full Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="name" name="name" required 
+                                   placeholder="Enter child's full name">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="age" class="form-label">Age <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="age" name="age" required 
+                                   min="1" max="18" placeholder="Age in years">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="diagnosis" class="form-label">Diagnosis/Condition</label>
+                        <textarea class="form-control" id="diagnosis" name="diagnosis" rows="3"
+                                  placeholder="Describe the child's diagnosis or specific needs (optional)"></textarea>
+                        <div class="form-text">
+                            This information helps therapists create appropriate therapy plans
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="date_of_birth" class="form-label">Date of Birth</label>
+                            <input type="date" class="form-control" id="date_of_birth" name="date_of_birth">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="gender" class="form-label">Gender</label>
+                            <select class="form-select" id="gender" name="gender">
+                                <option value="">Select gender</option>
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Current Challenges (Check all that apply)</label>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="communication" name="challenges" value="communication">
+                                    <label class="form-check-label" for="communication">
+                                        Communication difficulties
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="social" name="challenges" value="social">
+                                    <label class="form-check-label" for="social">
+                                        Social interaction challenges
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="behavioral" name="challenges" value="behavioral">
+                                    <label class="form-check-label" for="behavioral">
+                                        Behavioral concerns
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="sensory" name="challenges" value="sensory">
+                                    <label class="form-check-label" for="sensory">
+                                        Sensory processing issues
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="learning" name="challenges" value="learning">
+                                    <label class="form-check-label" for="learning">
+                                        Learning difficulties
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="motor" name="challenges" value="motor">
+                                    <label class="form-check-label" for="motor">
+                                        Motor skills development
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="goals" class="form-label">Therapy Goals</label>
+                        <textarea class="form-control" id="goals" name="goals" rows="3"
+                                  placeholder="What would you like to achieve through therapy? (optional)"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="additional_notes" class="form-label">Additional Notes</label>
+                        <textarea class="form-control" id="additional_notes" name="additional_notes" rows="2"
+                                  placeholder="Any other information that might be helpful (optional)"></textarea>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Privacy Notice:</strong> All information is kept confidential and is only shared with assigned therapists to provide the best care for your child.
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('children') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Add Child
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

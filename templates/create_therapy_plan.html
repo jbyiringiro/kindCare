@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+
+{% block title %}Create Therapy Plan{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">Create New Therapy Plan</h3>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('create_therapy_plan') }}">
+                        {{ form.hidden_tag() if form }}
+                        
+                        <!-- Child Selection -->
+                        <div class="mb-3">
+                            <label for="child_id" class="form-label">Select Child *</label>
+                            <select class="form-select" id="child_id" name="child_id" required>
+                                <option value="">Choose a child...</option>
+                                {% for child in children %}
+                                <option value="{{ child.id }}">{{ child.name }} (Age: {{ child.age }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Plan Title -->
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Plan Title *</label>
+                            <input type="text" class="form-control" id="title" name="title" required>
+                        </div>
+
+                        <!-- Plan Description -->
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="3" 
+                                placeholder="Brief description of the therapy plan..."></textarea>
+                        </div>
+
+                        <!-- Therapy Type -->
+                        <div class="mb-3">
+                            <label for="therapy_type" class="form-label">Therapy Type *</label>
+                            <select class="form-select" id="therapy_type" name="therapy_type" required>
+                                <option value="">Select therapy type...</option>
+                                <option value="aba">Applied Behavior Analysis (ABA)</option>
+                                <option value="speech">Speech Therapy</option>
+                                <option value="occupational">Occupational Therapy</option>
+                                <option value="social_skills">Social Skills Training</option>
+                                <option value="sensory">Sensory Integration</option>
+                                <option value="cognitive">Cognitive Behavioral Therapy</option>
+                                <option value="play">Play Therapy</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+
+                        <!-- Goals Section -->
+                        <div class="mb-4">
+                            <label class="form-label">Therapy Goals</label>
+                            <div id="goals-container">
+                                <div class="goal-item mb-2">
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" name="goals[]" 
+                                            placeholder="Enter therapy goal...">
+                                        <button type="button" class="btn btn-outline-danger remove-goal">
+                                            <i class="fas fa-minus"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="add-goal">
+                                <i class="fas fa-plus me-1"></i> Add Goal
+                            </button>
+                        </div>
+
+                        <!-- Activities Section -->
+                        <div class="mb-4">
+                            <label class="form-label">Activities & Exercises</label>
+                            <div id="activities-container">
+                                <div class="activity-item mb-3 p-3 border rounded">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-2">
+                                            <input type="text" class="form-control" name="activity_names[]" 
+                                                placeholder="Activity name...">
+                                        </div>
+                                        <div class="col-md-6 mb-2">
+                                            <input type="number" class="form-control" name="activity_duration[]" 
+                                                placeholder="Duration (minutes)" min="1">
+                                        </div>
+                                        <div class="col-md-12 mb-2">
+                                            <textarea class="form-control" name="activity_descriptions[]" rows="2" 
+                                                placeholder="Activity description..."></textarea>
+                                        </div>
+                                        <div class="col-md-12">
+                                            <button type="button" class="btn btn-outline-danger btn-sm remove-activity">
+                                                <i class="fas fa-trash me-1"></i> Remove Activity
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="add-activity">
+                                <i class="fas fa-plus me-1"></i> Add Activity
+                            </button>
+                        </div>
+
+                        <!-- Plan Duration -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="start_date" class="form-label">Start Date *</label>
+                                <input type="date" class="form-control" id="start_date" name="start_date" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="end_date" class="form-label">End Date</label>
+                                <input type="date" class="form-control" id="end_date" name="end_date">
+                            </div>
+                        </div>
+
+                        <!-- Session Frequency -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="sessions_per_week" class="form-label">Sessions per Week</label>
+                                <input type="number" class="form-control" id="sessions_per_week" 
+                                    name="sessions_per_week" min="1" max="7" value="2">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="session_duration" class="form-label">Session Duration (minutes)</label>
+                                <input type="number" class="form-control" id="session_duration" 
+                                    name="session_duration" min="15" value="60">
+                            </div>
+                        </div>
+
+                        <!-- Priority Level -->
+                        <div class="mb-3">
+                            <label for="priority" class="form-label">Priority Level</label>
+                            <select class="form-select" id="priority" name="priority">
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                                <option value="urgent">Urgent</option>
+                            </select>
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">Additional Notes</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="3" 
+                                placeholder="Any additional notes or special instructions..."></textarea>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('therapy_plans') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-1"></i> Back to Plans
+                            </a>
+                            <div>
+                                <button type="button" class="btn btn-outline-primary me-2" id="save-draft">
+                                    <i class="fas fa-save me-1"></i> Save as Draft
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-check me-1"></i> Create Plan
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add Goal functionality
+    document.getElementById('add-goal').addEventListener('click', function() {
+        const container = document.getElementById('goals-container');
+        const goalItem = document.createElement('div');
+        goalItem.className = 'goal-item mb-2';
+        goalItem.innerHTML = `
+            <div class="input-group">
+                <input type="text" class="form-control" name="goals[]" placeholder="Enter therapy goal...">
+                <button type="button" class="btn btn-outline-danger remove-goal">
+                    <i class="fas fa-minus"></i>
+                </button>
+            </div>
+        `;
+        container.appendChild(goalItem);
+    });
+
+    // Remove Goal functionality
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-goal')) {
+            const goalItem = e.target.closest('.goal-item');
+            if (document.querySelectorAll('.goal-item').length > 1) {
+                goalItem.remove();
+            }
+        }
+    });
+
+    // Add Activity functionality
+    document.getElementById('add-activity').addEventListener('click', function() {
+        const container = document.getElementById('activities-container');
+        const activityItem = document.createElement('div');
+        activityItem.className = 'activity-item mb-3 p-3 border rounded';
+        activityItem.innerHTML = `
+            <div class="row">
+                <div class="col-md-6 mb-2">
+                    <input type="text" class="form-control" name="activity_names[]" placeholder="Activity name...">
+                </div>
+                <div class="col-md-6 mb-2">
+                    <input type="number" class="form-control" name="activity_duration[]" placeholder="Duration (minutes)" min="1">
+                </div>
+                <div class="col-md-12 mb-2">
+                    <textarea class="form-control" name="activity_descriptions[]" rows="2" placeholder="Activity description..."></textarea>
+                </div>
+                <div class="col-md-12">
+                    <button type="button" class="btn btn-outline-danger btn-sm remove-activity">
+                        <i class="fas fa-trash me-1"></i> Remove Activity
+                    </button>
+                </div>
+            </div>
+        `;
+        container.appendChild(activityItem);
+    });
+
+    // Remove Activity functionality
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-activity')) {
+            const activityItem = e.target.closest('.activity-item');
+            if (document.querySelectorAll('.activity-item').length > 1) {
+                activityItem.remove();
+            }
+        }
+    });
+
+    // Set minimum date to today
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('start_date').min = today;
+    
+    // Update end date minimum when start date changes
+    document.getElementById('start_date').addEventListener('change', function() {
+        document.getElementById('end_date').min = this.value;
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,528 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Resource{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">Upload New Resource</h3>
+                    <small class="text-muted">Share educational materials and tools with the therapy community</small>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('upload_resource') }}" enctype="multipart/form-data">
+                        {{ form.hidden_tag() if form }}
+                        
+                        <!-- Resource Basic Information -->
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Resource Title *</label>
+                            <input type="text" class="form-control" id="title" name="title" required 
+                                placeholder="Enter a descriptive title for your resource">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description *</label>
+                            <textarea class="form-control" id="description" name="description" rows="4" required 
+                                placeholder="Provide a detailed description of the resource, its purpose, and how to use it"></textarea>
+                        </div>
+
+                        <!-- Resource Classification -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="category" class="form-label">Category *</label>
+                                <select class="form-select" id="category" name="category" required>
+                                    <option value="">Select category...</option>
+                                    <option value="worksheets">Worksheets</option>
+                                    <option value="videos">Videos</option>
+                                    <option value="games">Games & Activities</option>
+                                    <option value="guides">Guides & Manuals</option>
+                                    <option value="assessments">Assessment Tools</option>
+                                    <option value="tools">Therapy Tools</option>
+                                    <option value="books">Books & Reading Materials</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="age_group" class="form-label">Target Age Group</label>
+                                <select class="form-select" id="age_group" name="age_group">
+                                    <option value="">All ages</option>
+                                    <option value="2-4">2-4 years (Early Childhood)</option>
+                                    <option value="5-7">5-7 years (School Entry)</option>
+                                    <option value="8-12">8-12 years (Elementary)</option>
+                                    <option value="13-17">13-17 years (Adolescent)</option>
+                                    <option value="18+">18+ years (Adult)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="difficulty" class="form-label">Difficulty Level</label>
+                                <select class="form-select" id="difficulty" name="difficulty">
+                                    <option value="">Any level</option>
+                                    <option value="beginner">Beginner</option>
+                                    <option value="intermediate">Intermediate</option>
+                                    <option value="advanced">Advanced</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="therapy_type" class="form-label">Therapy Type</label>
+                                <select class="form-select" id="therapy_type" name="therapy_type">
+                                    <option value="">General/All types</option>
+                                    <option value="aba">Applied Behavior Analysis (ABA)</option>
+                                    <option value="speech">Speech Therapy</option>
+                                    <option value="occupational">Occupational Therapy</option>
+                                    <option value="social_skills">Social Skills Training</option>
+                                    <option value="sensory">Sensory Integration</option>
+                                    <option value="cognitive">Cognitive Behavioral Therapy</option>
+                                    <option value="play">Play Therapy</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- File Upload -->
+                        <div class="mb-4">
+                            <label for="resource_file" class="form-label">Upload File</label>
+                            <div class="input-group">
+                                <input type="file" class="form-control" id="resource_file" name="resource_file" 
+                                    accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.mp4,.mp3,.zip"
+                                    onchange="handleFileSelect(event)">
+                                <label class="input-group-text" for="resource_file">
+                                    <i class="fas fa-upload"></i>
+                                </label>
+                            </div>
+                            <div class="form-text">
+                                Supported formats: PDF, Word, PowerPoint, Excel, Images (jpg, png, gif), Videos (mp4), Audio (mp3), ZIP archives
+                                <br>Maximum file size: 50MB
+                            </div>
+                            <div id="file-preview" class="mt-2"></div>
+                        </div>
+
+                        <!-- External Link Alternative -->
+                        <div class="mb-3">
+                            <label for="external_link" class="form-label">External Link (Optional)</label>
+                            <input type="url" class="form-control" id="external_link" name="external_link" 
+                                placeholder="https://example.com/resource">
+                            <div class="form-text">
+                                If you prefer to link to an external resource instead of uploading a file
+                            </div>
+                        </div>
+
+                        <!-- Thumbnail Upload -->
+                        <div class="mb-3">
+                            <label for="thumbnail" class="form-label">Thumbnail Image (Optional)</label>
+                            <input type="file" class="form-control" id="thumbnail" name="thumbnail" 
+                                accept=".jpg,.jpeg,.png,.gif" onchange="previewThumbnail(event)">
+                            <div class="form-text">Upload a preview image for your resource (recommended: 300x200px)</div>
+                            <div id="thumbnail-preview" class="mt-2"></div>
+                        </div>
+
+                        <!-- Tags -->
+                        <div class="mb-3">
+                            <label for="tags" class="form-label">Tags</label>
+                            <input type="text" class="form-control" id="tags" name="tags" 
+                                placeholder="autism, communication, visual, behavior (separate with commas)">
+                            <div class="form-text">
+                                Add relevant tags to help others find your resource (separate with commas)
+                            </div>
+                        </div>
+
+                        <!-- Additional Settings -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="mb-0">Additional Settings</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="duration" class="form-label">Duration/Time Required</label>
+                                        <input type="text" class="form-control" id="duration" name="duration" 
+                                            placeholder="e.g., 30 minutes, 1 hour, 15-20 minutes">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="materials_needed" class="form-label">Materials Needed</label>
+                                        <input type="text" class="form-control" id="materials_needed" name="materials_needed" 
+                                            placeholder="e.g., printer, scissors, colored pencils">
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="learning_objectives" class="form-label">Learning Objectives</label>
+                                    <textarea class="form-control" id="learning_objectives" name="learning_objectives" rows="3" 
+                                        placeholder="What skills or knowledge will this resource help develop?"></textarea>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="instructions" class="form-label">Usage Instructions</label>
+                                    <textarea class="form-control" id="instructions" name="instructions" rows="3" 
+                                        placeholder="Step-by-step instructions on how to use this resource effectively"></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Permissions -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="mb-0">Sharing Permissions</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" name="visibility" id="visibility_all" 
+                                        value="all" checked>
+                                    <label class="form-check-label" for="visibility_all">
+                                        <strong>Public</strong> - Available to all users
+                                    </label>
+                                </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="radio" name="visibility" id="visibility_therapists" 
+                                        value="therapists">
+                                    <label class="form-check-label" for="visibility_therapists">
+                                        <strong>Therapists Only</strong> - Only available to therapists and admins
+                                    </label>
+                                </div>
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="radio" name="visibility" id="visibility_private" 
+                                        value="private">
+                                    <label class="form-check-label" for="visibility_private">
+                                        <strong>Private</strong> - Only visible to you
+                                    </label>
+                                </div>
+
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="allow_download" name="allow_download" checked>
+                                    <label class="form-check-label" for="allow_download">
+                                        Allow users to download this resource
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Copyright and Attribution -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="mb-0">Copyright & Attribution</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label for="author" class="form-label">Author/Creator</label>
+                                    <input type="text" class="form-control" id="author" name="author" 
+                                        value="{{ current_user.name }}" 
+                                        placeholder="Name of the person/organization who created this resource">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="license" class="form-label">License</label>
+                                    <select class="form-select" id="license" name="license">
+                                        <option value="all_rights_reserved">All Rights Reserved</option>
+                                        <option value="cc_by">Creative Commons - Attribution (CC BY)</option>
+                                        <option value="cc_by_sa">Creative Commons - Attribution ShareAlike (CC BY-SA)</option>
+                                        <option value="cc_by_nc">Creative Commons - Attribution NonCommercial (CC BY-NC)</option>
+                                        <option value="cc_by_nc_sa">Creative Commons - Attribution NonCommercial ShareAlike (CC BY-NC-SA)</option>
+                                        <option value="public_domain">Public Domain</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="copyright_confirmation" 
+                                        name="copyright_confirmation" required>
+                                    <label class="form-check-label" for="copyright_confirmation">
+                                        I confirm that I have the right to share this resource and that it doesn't violate any copyrights *
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('resources') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-1"></i> Back to Resources
+                            </a>
+                            <div>
+                                <button type="button" class="btn btn-outline-primary me-2" id="save-draft">
+                                    <i class="fas fa-save me-1"></i> Save as Draft
+                                </button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-upload me-1"></i> Upload Resource
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function handleFileSelect(event) {
+    const file = event.target.files[0];
+    const preview = document.getElementById('file-preview');
+    
+    if (file) {
+        const fileSize = (file.size / 1024 / 1024).toFixed(2); // Size in MB
+        const fileName = file.name;
+        const fileType = file.type;
+        
+        // Check file size (50MB limit)
+        if (file.size > 50 * 1024 * 1024) {
+            alert('File size exceeds 50MB limit. Please choose a smaller file.');
+            event.target.value = '';
+            preview.innerHTML = '';
+            return;
+        }
+        
+        // Display file info
+        preview.innerHTML = `
+            <div class="alert alert-info">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-file me-2"></i>
+                    <div>
+                        <strong>${fileName}</strong><br>
+                        <small>Size: ${fileSize} MB | Type: ${fileType || 'Unknown'}</small>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger ms-auto" onclick="clearFile()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    } else {
+        preview.innerHTML = '';
+    }
+}
+
+function previewThumbnail(event) {
+    const file = event.target.files[0];
+    const preview = document.getElementById('thumbnail-preview');
+    
+    if (file) {
+        // Check if it's an image
+        if (!file.type.startsWith('image/')) {
+            alert('Please select an image file for the thumbnail.');
+            event.target.value = '';
+            return;
+        }
+        
+        // Check file size (5MB limit for thumbnails)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('Thumbnail size should be less than 5MB.');
+            event.target.value = '';
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.innerHTML = `
+                <div class="thumbnail-preview">
+                    <img src="${e.target.result}" alt="Thumbnail preview" 
+                         style="max-width: 200px; max-height: 150px; border: 1px solid #ddd; border-radius: 4px;">
+                    <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="clearThumbnail()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+        };
+        reader.readAsDataURL(file);
+    } else {
+        preview.innerHTML = '';
+    }
+}
+
+function clearFile() {
+    document.getElementById('resource_file').value = '';
+    document.getElementById('file-preview').innerHTML = '';
+}
+
+function clearThumbnail() {
+    document.getElementById('thumbnail').value = '';
+    document.getElementById('thumbnail-preview').innerHTML = '';
+}
+
+// Form validation
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const fileInput = document.getElementById('resource_file');
+    const linkInput = document.getElementById('external_link');
+    
+    form.addEventListener('submit', function(e) {
+        // Check if either file or external link is provided
+        if (!fileInput.files.length && !linkInput.value.trim()) {
+            e.preventDefault();
+            alert('Please either upload a file or provide an external link.');
+            return;
+        }
+        
+        // Check copyright confirmation
+        const copyrightCheck = document.getElementById('copyright_confirmation');
+        if (!copyrightCheck.checked) {
+            e.preventDefault();
+            alert('Please confirm that you have the right to share this resource.');
+            return;
+        }
+    });
+    
+    // Auto-generate tags based on category and therapy type
+    const categorySelect = document.getElementById('category');
+    const therapyTypeSelect = document.getElementById('therapy_type');
+    const tagsInput = document.getElementById('tags');
+    
+    function updateSuggestedTags() {
+        const category = categorySelect.value;
+        const therapyType = therapyTypeSelect.value;
+        const currentTags = tagsInput.value;
+        
+        let suggestedTags = ['autism', 'therapy'];
+        
+        if (category) {
+            suggestedTags.push(category.replace('_', ' '));
+        }
+        
+        if (therapyType) {
+            suggestedTags.push(therapyType.replace('_', ' '));
+        }
+        
+        // Only update if tags field is empty
+        if (!currentTags.trim()) {
+            tagsInput.value = suggestedTags.join(', ');
+        }
+    }
+    
+    categorySelect.addEventListener('change', updateSuggestedTags);
+    therapyTypeSelect.addEventListener('change', updateSuggestedTags);
+});
+
+// Save as draft functionality
+document.getElementById('save-draft').addEventListener('click', function() {
+    const form = document.querySelector('form');
+    const formData = new FormData(form);
+    formData.append('is_draft', 'true');
+    
+    // Remove required validation for draft
+    const requiredFields = form.querySelectorAll('[required]');
+    requiredFields.forEach(field => field.removeAttribute('required'));
+    
+    fetch(form.action, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Resource saved as draft successfully!');
+            window.location.href = data.redirect || '/resources';
+        } else {
+            alert('Error saving draft: ' + (data.message || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error saving draft');
+    })
+    .finally(() => {
+        // Restore required attributes
+        requiredFields.forEach(field => field.setAttribute('required', ''));
+    });
+});
+
+// File drag and drop functionality
+const fileInput = document.getElementById('resource_file');
+const fileInputContainer = fileInput.parentElement;
+
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    fileInputContainer.addEventListener(eventName, preventDefaults, false);
+});
+
+function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+}
+
+['dragenter', 'dragover'].forEach(eventName => {
+    fileInputContainer.addEventListener(eventName, highlight, false);
+});
+
+['dragleave', 'drop'].forEach(eventName => {
+    fileInputContainer.addEventListener(eventName, unhighlight, false);
+});
+
+function highlight(e) {
+    fileInputContainer.classList.add('drag-highlight');
+}
+
+function unhighlight(e) {
+    fileInputContainer.classList.remove('drag-highlight');
+}
+
+fileInputContainer.addEventListener('drop', handleDrop, false);
+
+function handleDrop(e) {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    
+    if (files.length > 0) {
+        fileInput.files = files;
+        handleFileSelect({ target: fileInput });
+    }
+}
+</script>
+
+<style>
+.thumbnail-preview {
+    display: flex;
+    align-items: center;
+    margin-top: 10px;
+}
+
+.drag-highlight {
+    border: 2px dashed #007bff !important;
+    background-color: #f8f9fa;
+}
+
+.input-group:hover {
+    cursor: pointer;
+}
+
+.file-preview {
+    margin-top: 10px;
+}
+
+.alert {
+    margin-bottom: 0;
+}
+
+.card-header h6 {
+    color: #495057;
+    font-weight: 600;
+}
+
+.form-check-label strong {
+    color: #495057;
+}
+
+.btn-group-toggle .btn {
+    margin-bottom: 5px;
+}
+
+/* Custom file input styling */
+.form-control[type="file"] {
+    padding: 8px 12px;
+}
+
+.form-control[type="file"]::-webkit-file-upload-button {
+    padding: 6px 12px;
+    margin: -6px -12px -6px 0;
+    background-color: #f8f9fa;
+    border: 1px solid #ced4da;
+    border-radius: 4px 0 0 4px;
+    color: #495057;
+    cursor: pointer;
+}
+
+.form-control[type="file"]::-webkit-file-upload-button:hover {
+    background-color: #e9ecef;
+}
+</style>
+{% endblock %}
