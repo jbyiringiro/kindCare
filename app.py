@@ -104,17 +104,28 @@ def load_user(user_id):
 # --- Helper Functions ---
 def get_user_by_username(username):
     try:
+        print(f"DEBUG: Querying Firestore for user with username: '{username}'")
         users_ref = db.collection('users')
-        # Use .limit(1) for efficiency
-        query = users_ref.where('username', '==', username).limit(1).get()
+        print("DEBUG: Building query object...")
+        # --- Use the new style filter to remove the UserWarning ---
+        # query_obj = users_ref.where(filter=FieldFilter("username", "==", username)).limit(1)
+        # --- OR, keep the old style but be aware of the warning ---
+        query_obj = users_ref.where('username', '==', username).limit(1)
+        print("DEBUG: Executing query.get()...")
+        query = query_obj.get() # <--- This is the likely point of hanging
+        print(f"DEBUG: Query executed. Number of documents found: {len(query)}")
         if query:
             user_doc = query[0]
             user_data = user_doc.to_dict()
             user_data['id'] = user_doc.id
+            print(f"DEBUG: User data loaded: {user_data.get('username')}")
             return User(user_data)
+        print("DEBUG: No user found with that username.")
         return None
     except Exception as e:
-        print(f"Error fetching user by username {username}: {e}")
+        print(f"ERROR: Exception in get_user_by_username for '{username}': {e}")
+        import traceback
+        traceback.print_exc() # Print the full stack trace for debugging
         return None
 
 def get_user_by_email(email):
