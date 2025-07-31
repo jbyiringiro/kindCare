@@ -14,7 +14,7 @@ def create_database():
     print("Creating database tables...")
     with app.app_context():
         db.create_all()
-        print("✓ Database tables created successfully")
+        print("Database tables created successfully")
 
 def create_sample_users():
     """Create sample users for testing"""
@@ -60,7 +60,7 @@ def create_sample_users():
             db.session.add(caregiver)
             
         db.session.commit()
-        print("✓ Sample users created successfully")
+        print("Sample users created successfully")
         print("  - Admin: admin / admin123")
         print("  - Therapist: dr_smith / therapist123")
         print("  - Caregiver: parent_john / parent123")
@@ -75,7 +75,7 @@ def create_sample_data():
         therapist = User.query.filter_by(username='dr_smith').first()
         
         if not caregiver or not therapist:
-            print("⚠ Sample users not found. Run create_sample_users() first.")
+            print("Sample users not found. Run create_sample_users() first.")
             return
         
         # Create sample child
@@ -138,7 +138,7 @@ def create_sample_data():
                 db.session.add(activity)
             
             db.session.commit()
-            print("✓ Sample child and therapy plan created")
+            print("Sample child and therapy plan created")
         
         # Create sample resources
         sample_resources = [
@@ -218,7 +218,7 @@ def main():
     uploads_dir = os.path.join('static', 'uploads')
     if not os.path.exists(uploads_dir):
         os.makedirs(uploads_dir)
-        print("✓ Created uploads directory")
+        print("Created uploads directory")
     
     create_database()
     create_sample_users()

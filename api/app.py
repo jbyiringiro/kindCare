@@ -7,14 +7,14 @@ from datetime import datetime
 import os
 import uuid
 
-# for Vercel
-app = Flask(__name__, template_folder="../templates", static_folder="../static")
+# For Vercel: All folders are now relative to this file's location
+app = Flask(__name__, template_folder="templates", static_folder="static")
 
 app.config['SECRET_KEY'] = 'your-secret-key-here'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///../instance/therapy_platform.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///instance/therapy_platform.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['UPLOAD_FOLDER'] = '../static/uploads'
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+app.config['UPLOAD_FOLDER'] = 'static/uploads'
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB
 
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
@@ -454,5 +454,8 @@ if __name__ == '__main__':
         db.create_all()
     app.run(debug=True)
 
-    # For Vercel to recognize the app
+with app.app_context():
+    db.create_all()
+
+# Required for Vercel
 handler = app
