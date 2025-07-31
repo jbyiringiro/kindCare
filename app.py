@@ -14,14 +14,25 @@ app = Flask(__name__, template_folder="templates", static_folder="static")
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB
 
+# --- UPDATED FIREBASE INITIALIZATION WITH ERROR CHECKING ---
 # Initialize Firebase
 if not firebase_admin._apps:
+    # Check for required environment variables
+    required_env_vars = [
+        'FIREBASE_PROJECT_ID', 'FIREBASE_PRIVATE_KEY_ID', 'FIREBASE_PRIVATE_KEY',
+        'FIREBASE_CLIENT_EMAIL', 'FIREBASE_CLIENT_ID', 'FIREBASE_CLIENT_CERT_URL',
+        'FIREBASE_STORAGE_BUCKET'
+    ]
+    missing_vars = [var for var in required_env_vars if not os.environ.get(var)]
+    if missing_vars:
+        raise ValueError(f"Missing required environment variables for Firebase: {', '.join(missing_vars)}")
+
     # For Vercel deployment, we'll use environment variables
     firebase_config = {
         "type": "service_account",
         "project_id": os.environ.get('FIREBASE_PROJECT_ID'),
         "private_key_id": os.environ.get('FIREBASE_PRIVATE_KEY_ID'),
-        "private_key": os.environ.get('FIREBASE_PRIVATE_KEY').replace('\\n', '\n'),
+        "private_key": os.environ.get('FIREBASE_PRIVATE_KEY').replace('\\n', '\n') if os.environ.get('FIREBASE_PRIVATE_KEY') else None,
         "client_email": os.environ.get('FIREBASE_CLIENT_EMAIL'),
         "client_id": os.environ.get('FIREBASE_CLIENT_ID'),
         "auth_uri": "https://accounts.google.com/o/oauth2/auth",
@@ -29,10 +40,15 @@ if not firebase_admin._apps:
         "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
         "client_x509_cert_url": os.environ.get('FIREBASE_CLIENT_CERT_URL')
     }
+    # Add a check specifically for private_key
+    if not firebase_config["private_key"]:
+         raise ValueError("FIREBASE_PRIVATE_KEY environment variable is not set or is empty.")
+
     cred = credentials.Certificate(firebase_config)
     firebase_admin.initialize_app(cred, {
         'storageBucket': os.environ.get('FIREBASE_STORAGE_BUCKET')
     })
+# --- END OF UPDATED FIREBASE INITIALIZATION ---
 
 # Initialize Firestore and Storage
 db = firestore.client()
@@ -145,7 +161,6 @@ def login():
             return redirect(url_for('dashboard'))
         else:
             flash('Invalid username or password')
-    
     return render_template('login.html')
 
 @app.route('/logout')
