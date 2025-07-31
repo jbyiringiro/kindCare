@@ -1,4 +1,12 @@
 import os
+# --- NEW: Load environment variables from .env file ---
+# This should be done before other imports that might use these variables.
+from dotenv import load_dotenv
+# Load the .env file if it exists (useful for local development)
+# Environment variables set directly in the Render dashboard will take precedence.
+load_dotenv()
+# --- END OF NEW CODE ---
+
 import uuid
 from datetime import datetime
 from werkzeug.utils import secure_filename
@@ -18,6 +26,7 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB
 # Initialize Firebase
 if not firebase_admin._apps:
     # Check for required environment variables
+    # This helps catch configuration errors early, whether using .env locally or Render dashboard variables.
     required_env_vars = [
         'FIREBASE_PROJECT_ID', 'FIREBASE_PRIVATE_KEY_ID', 'FIREBASE_PRIVATE_KEY',
         'FIREBASE_CLIENT_EMAIL', 'FIREBASE_CLIENT_ID', 'FIREBASE_CLIENT_CERT_URL',
@@ -27,7 +36,8 @@ if not firebase_admin._apps:
     if missing_vars:
         raise ValueError(f"Missing required environment variables for Firebase: {', '.join(missing_vars)}")
 
-    # For Vercel deployment, we'll use environment variables
+    # For Render deployment, we'll use environment variables
+    # The .env file (if used locally) or Render dashboard should provide these.
     firebase_config = {
         "type": "service_account",
         "project_id": os.environ.get('FIREBASE_PROJECT_ID'),
@@ -555,7 +565,7 @@ def api_child_progress(child_id):
         
     return jsonify(data)
 
-# Required for Vercel
+# Required for Render
 handler = app
 
 if __name__ == '__main__':
