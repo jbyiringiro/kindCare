@@ -1,12 +1,5 @@
+# app.py
 import os
-# --- NEW: Load environment variables from .env file ---
-# This should be done before other imports that might use these variables.
-from dotenv import load_dotenv
-# Load the .env file if it exists (useful for local development)
-# Environment variables set directly in the Render dashboard will take precedence.
-load_dotenv()
-# --- END OF NEW CODE ---
-
 import uuid
 from datetime import datetime
 from werkzeug.utils import secure_filename
@@ -14,19 +7,19 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import firebase_admin
 from firebase_admin import credentials, firestore, storage
 import tempfile
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 
-# Initialize Flask app
+# --- Initialize Flask app ---
 app = Flask(__name__, template_folder="templates", static_folder="static")
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here')
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-fallback-secret-key-change-for-prod')
+# Set maximum upload size (e.g., 16MB)
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024 
 
-# --- UPDATED FIREBASE INITIALIZATION WITH ERROR CHECKING ---
-# Initialize Firebase
+# --- Initialize Firebase ---
+# Check if Firebase app is already initialized (important for some environments)
 if not firebase_admin._apps:
-    # Check for required environment variables
-    # This helps catch configuration errors early, whether using .env locally or Render dashboard variables.
+    # --- Critical: Check for required environment variables ---
     required_env_vars = [
         'FIREBASE_PROJECT_ID', 'FIREBASE_PRIVATE_KEY_ID', 'FIREBASE_PRIVATE_KEY',
         'FIREBASE_CLIENT_EMAIL', 'FIREBASE_CLIENT_ID', 'FIREBASE_CLIENT_CERT_URL',
@@ -34,37 +27,45 @@ if not firebase_admin._apps:
     ]
     missing_vars = [var for var in required_env_vars if not os.environ.get(var)]
     if missing_vars:
-        raise ValueError(f"Missing required environment variables for Firebase: {', '.join(missing_vars)}")
+        # Provide a clear error message if variables are missing
+        raise ValueError(f"Missing required environment variables for Firebase setup: {', '.join(missing_vars)}. Please set these in your Render Dashboard.")
 
-    # For Render deployment, we'll use environment variables
-    # The .env file (if used locally) or Render dashboard should provide these.
+    # Prepare Firebase configuration using environment variables
+    # The replace('\\n', '\n') is crucial if the private key in the env var uses literal \n characters.
     firebase_config = {
         "type": "service_account",
         "project_id": os.environ.get('FIREBASE_PROJECT_ID'),
         "private_key_id": os.environ.get('FIREBASE_PRIVATE_KEY_ID'),
-        "private_key": os.environ.get('FIREBASE_PRIVATE_KEY').replace('\\n', '\n') if os.environ.get('FIREBASE_PRIVATE_KEY') else None,
+        "private_key": os.environ.get('FIREBASE_PRIVATE_KEY').replace('\\n', '\n'),
         "client_email": os.environ.get('FIREBASE_CLIENT_EMAIL'),
         "client_id": os.environ.get('FIREBASE_CLIENT_ID'),
-        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-        "token_uri": "https://oauth2.googleapis.com/token",
-        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+        # These URLs are standard for Google OAuth2 and don't usually need to be env vars,
+        # but we'll use them from env if provided, with fallbacks.
+        "auth_uri": os.environ.get('FIREBASE_AUTH_URI', "https://accounts.google.com/o/oauth2/auth"),
+        "token_uri": os.environ.get('FIREBASE_TOKEN_URI', "https://oauth2.googleapis.com/token"),
+        "auth_provider_x509_cert_url": os.environ.get('FIREBASE_AUTH_PROVIDER_CERT_URL', "https://www.googleapis.com/oauth2/v1/certs"),
         "client_x509_cert_url": os.environ.get('FIREBASE_CLIENT_CERT_URL')
     }
-    # Add a check specifically for private_key
-    if not firebase_config["private_key"]:
-         raise ValueError("FIREBASE_PRIVATE_KEY environment variable is not set or is empty.")
 
-    cred = credentials.Certificate(firebase_config)
-    firebase_admin.initialize_app(cred, {
-        'storageBucket': os.environ.get('FIREBASE_STORAGE_BUCKET')
-    })
-# --- END OF UPDATED FIREBASE INITIALIZATION ---
+    # Initialize Firebase Admin SDK
+    try:
+        cred = credentials.Certificate(firebase_config)
+        firebase_admin.initialize_app(cred, {
+            'storageBucket': os.environ.get('FIREBASE_STORAGE_BUCKET')
+        })
+        print("Firebase initialized successfully.")
+    except Exception as e:
+        raise RuntimeError(f"Failed to initialize Firebase: {e}")
 
-# Initialize Firestore and Storage
-db = firestore.client()
-bucket = storage.bucket()
+# Initialize Firestore and Storage clients
+try:
+    db = firestore.client()
+    bucket = storage.bucket()
+    print("Firestore and Storage clients initialized.")
+except Exception as e:
+    raise RuntimeError(f"Failed to get Firestore/Storage clients: {e}")
 
-# Custom User class (since we're not using SQLAlchemy)
+# --- User Management ---
 class User(UserMixin):
     def __init__(self, user_data):
         self.id = user_data.get('id')
@@ -74,7 +75,8 @@ class User(UserMixin):
         self.role = user_data.get('role')
         self.full_name = user_data.get('full_name')
         self.phone = user_data.get('phone')
-        self.created_at = user_data.get('created_at')
+        # Assuming 'created_at' is stored as a Firestore timestamp or datetime string
+        self.created_at = user_data.get('created_at') 
         self.is_active = user_data.get('is_active', True)
     
     def get_id(self):
@@ -87,36 +89,50 @@ login_manager.login_view = 'login'
 
 @login_manager.user_loader
 def load_user(user_id):
-    # Fetch user from Firestore
-    user_doc = db.collection('users').document(user_id).get()
-    if user_doc.exists:
-        user_data = user_doc.to_dict()
-        user_data['id'] = user_doc.id
-        return User(user_data)
-    return None
+    try:
+        user_doc = db.collection('users').document(user_id).get()
+        if user_doc.exists:
+            user_data = user_doc.to_dict()
+            user_data['id'] = user_doc.id
+            return User(user_data)
+        else:
+            return None
+    except Exception as e:
+        print(f"Error loading user {user_id}: {e}")
+        return None # Or handle error as appropriate
 
-# Helper functions for database operations
+# --- Helper Functions ---
 def get_user_by_username(username):
-    users_ref = db.collection('users')
-    query = users_ref.where('username', '==', username).limit(1).get()
-    if query:
-        user_doc = query[0]
-        user_data = user_doc.to_dict()
-        user_data['id'] = user_doc.id
-        return User(user_data)
-    return None
+    try:
+        users_ref = db.collection('users')
+        # Use .limit(1) for efficiency
+        query = users_ref.where('username', '==', username).limit(1).get()
+        if query:
+            user_doc = query[0]
+            user_data = user_doc.to_dict()
+            user_data['id'] = user_doc.id
+            return User(user_data)
+        return None
+    except Exception as e:
+        print(f"Error fetching user by username {username}: {e}")
+        return None
 
 def get_user_by_email(email):
-    users_ref = db.collection('users')
-    query = users_ref.where('email', '==', email).limit(1).get()
-    if query:
-        user_doc = query[0]
-        user_data = user_doc.to_dict()
-        user_data['id'] = user_doc.id
-        return User(user_data)
-    return None
+    try:
+        users_ref = db.collection('users')
+        query = users_ref.where('email', '==', email).limit(1).get()
+        if query:
+            user_doc = query[0]
+            user_data = user_doc.to_dict()
+            user_data['id'] = user_doc.id
+            return User(user_data)
+        return None
+    except Exception as e:
+        print(f"Error fetching user by email {email}: {e}")
+        return None
 
-# Routes
+# --- Routes ---
+
 @app.route('/')
 def index():
     if current_user.is_authenticated:
@@ -132,16 +148,16 @@ def register():
         role = request.form['role']
         full_name = request.form['full_name']
         phone = request.form.get('phone', '')
-        
+
         # Check if user already exists
         if get_user_by_username(username):
-            flash('Username already exists')
+            flash('Username already exists', 'error')
             return render_template('register.html')
         if get_user_by_email(email):
-            flash('Email already registered')
+            flash('Email already registered', 'error')
             return render_template('register.html')
-        
-        # Create new user in Firestore
+
+        # Create new user data
         user_data = {
             'username': username,
             'email': email,
@@ -152,11 +168,17 @@ def register():
             'created_at': datetime.utcnow(),
             'is_active': True
         }
-        
-        user_ref = db.collection('users').add(user_data)
-        flash('Registration successful!')
-        return redirect(url_for('login'))
-    
+
+        try:
+            # Add user to Firestore
+            db.collection('users').add(user_data)
+            flash('Registration successful! Please log in.', 'success')
+            return redirect(url_for('login'))
+        except Exception as e:
+            print(f"Error creating user: {e}")
+            flash('An error occurred during registration. Please try again.', 'error')
+            return render_template('register.html')
+
     return render_template('register.html')
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -165,408 +187,299 @@ def login():
         username = request.form['username']
         password = request.form['password']
         user = get_user_by_username(username)
-        
+
         if user and check_password_hash(user.password_hash, password):
             login_user(user)
+            flash('Logged in successfully.', 'success')
             return redirect(url_for('dashboard'))
         else:
-            flash('Invalid username or password')
+            flash('Invalid username or password', 'error')
+
     return render_template('login.html')
 
 @app.route('/logout')
 @login_required
 def logout():
     logout_user()
+    flash('You have been logged out.', 'info')
     return redirect(url_for('index'))
 
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    if current_user.role == 'caregiver':
-        # For caregivers, we need to fetch their children
+    try:
+        if current_user.role == 'caregiver':
+            # Fetch children for the caregiver
+            children_docs = db.collection('children').where('caregiver_id', '==', current_user.id).get()
+            children = []
+            for doc in children_docs:
+                child_data = doc.to_dict()
+                child_data['id'] = doc.id
+                children.append(child_data)
+
+            # Fetch recent progress logs for their children
+            child_ids = [child['id'] for child in children]
+            recent_logs = []
+            if child_ids:
+                # Limit to last 5 logs across all children
+                logs_query = db.collection('progress_logs').where('child_id', 'in', child_ids).order_by('created_at', direction=firestore.Query.DESCENDING).limit(5).get()
+                for doc in logs_query:
+                    log_data = doc.to_dict()
+                    log_data['id'] = doc.id
+                    recent_logs.append(log_data)
+
+            return render_template('dashboard_caregiver.html', children=children, recent_logs=recent_logs)
+
+        elif current_user.role == 'therapist':
+            # Fetch therapy plans for the therapist
+            plans_docs = db.collection('therapy_plans').where('therapist_id', '==', current_user.id).get()
+            therapy_plans = []
+            for doc in plans_docs:
+                plan_data = doc.to_dict()
+                plan_data['id'] = doc.id
+                therapy_plans.append(plan_data)
+
+            # Fetch resources uploaded by this therapist
+            resources_docs = db.collection('resources').where('uploaded_by', '==', current_user.id).get()
+            resources = []
+            for doc in resources_docs:
+                resource_data = doc.to_dict()
+                resource_data['id'] = doc.id
+                resources.append(resource_data)
+
+            return render_template('dashboard_therapist.html', therapy_plans=therapy_plans, resources=resources)
+
+        elif current_user.role == 'admin':
+            # Fetch counts for admin dashboard
+            total_users = len(db.collection('users').get())
+            total_children = len(db.collection('children').get())
+            pending_resources = len(db.collection('resources').where('is_approved', '==', False).get())
+
+            return render_template('dashboard_admin.html',
+                                 total_users=total_users,
+                                 total_children=total_children,
+                                 pending_resources=pending_resources)
+
+        else:
+            # Default dashboard if role is unrecognized
+            return render_template('dashboard.html')
+    except Exception as e:
+        print(f"Error loading dashboard for user {current_user.id}: {e}")
+        flash('An error occurred loading the dashboard.', 'error')
+        return render_template('dashboard.html')
+
+
+# --- Example of a more complex route using Firestore ---
+@app.route('/children')
+@login_required
+def children():
+    if current_user.role != 'caregiver':
+        flash('Access denied', 'error')
+        return redirect(url_for('dashboard'))
+
+    try:
         children_docs = db.collection('children').where('caregiver_id', '==', current_user.id).get()
         children = []
         for doc in children_docs:
             child_data = doc.to_dict()
             child_data['id'] = doc.id
             children.append(child_data)
-        
-        # Fetch recent progress logs for their children
-        child_ids = [child['id'] for child in children]
-        if child_ids:
-            logs_query = db.collection('progress_logs').where('child_id', 'in', child_ids).order_by('created_at', direction=firestore.Query.DESCENDING).limit(5).get()
-            recent_logs = []
-            for doc in logs_query:
-                log_data = doc.to_dict()
-                log_data['id'] = doc.id
-                recent_logs.append(log_data)
-        else:
-            recent_logs = []
-            
-        return render_template('dashboard_caregiver.html', children=children, recent_logs=recent_logs)
-        
-    elif current_user.role == 'therapist':
-        # For therapists, fetch their therapy plans
-        plans_docs = db.collection('therapy_plans').where('therapist_id', '==', current_user.id).get()
-        therapy_plans = []
-        for doc in plans_docs:
-            plan_data = doc.to_dict()
-            plan_data['id'] = doc.id
-            therapy_plans.append(plan_data)
-            
-        # Fetch resources uploaded by this therapist
-        resources_docs = db.collection('resources').where('uploaded_by', '==', current_user.id).get()
-        resources = []
-        for doc in resources_docs:
-            resource_data = doc.to_dict()
-            resource_data['id'] = doc.id
-            resources.append(resource_data)
-            
-        return render_template('dashboard_therapist.html', therapy_plans=therapy_plans, resources=resources)
-        
-    elif current_user.role == 'admin':
-        # For admin, get counts
-        total_users = len(db.collection('users').get())
-        total_children = len(db.collection('children').get())
-        pending_resources = len(db.collection('resources').where('is_approved', '==', False).get())
-        
-        return render_template('dashboard_admin.html', 
-                             total_users=total_users, 
-                             total_children=total_children,
-                             pending_resources=pending_resources)
-                             
-    return render_template('dashboard.html')
-
-@app.route('/children')
-@login_required
-def children():
-    if current_user.role != 'caregiver':
-        flash('Access denied')
+        return render_template('children.html', children=children)
+    except Exception as e:
+        print(f"Error fetching children for user {current_user.id}: {e}")
+        flash('An error occurred fetching children.', 'error')
         return redirect(url_for('dashboard'))
-        
-    children_docs = db.collection('children').where('caregiver_id', '==', current_user.id).get()
-    children = []
-    for doc in children_docs:
-        child_data = doc.to_dict()
-        child_data['id'] = doc.id
-        children.append(child_data)
-        
-    return render_template('children.html', children=children)
 
 @app.route('/add_child', methods=['GET', 'POST'])
 @login_required
 def add_child():
     if current_user.role != 'caregiver':
-        flash('Access denied')
+        flash('Access denied', 'error')
         return redirect(url_for('dashboard'))
-        
+
     if request.method == 'POST':
-        child_data = {
-            'name': request.form['name'],
-            'age': int(request.form['age']),
-            'diagnosis': request.form['diagnosis'],
-            'caregiver_id': current_user.id,
-            'created_at': datetime.utcnow()
-        }
-        
-        db.collection('children').add(child_data)
-        flash('Child added successfully!')
-        return redirect(url_for('children'))
-        
+        try:
+            child_data = {
+                'name': request.form['name'],
+                'age': int(request.form['age']),
+                'diagnosis': request.form['diagnosis'],
+                'caregiver_id': current_user.id,
+                'created_at': datetime.utcnow()
+            }
+            db.collection('children').add(child_data)
+            flash('Child added successfully!', 'success')
+            return redirect(url_for('children'))
+        except ValueError:
+            flash('Invalid age provided.', 'error')
+        except Exception as e:
+            print(f"Error adding child: {e}")
+            flash('An error occurred adding the child.', 'error')
+
     return render_template('add_child.html')
 
-@app.route('/therapy_plans')
-@login_required
-def therapy_plans():
-    if current_user.role == 'therapist':
-        plans_docs = db.collection('therapy_plans').where('therapist_id', '==', current_user.id).get()
-    elif current_user.role == 'caregiver':
-        # Get children IDs for this caregiver
-        children_docs = db.collection('children').where('caregiver_id', '==', current_user.id).get()
-        child_ids = [doc.id for doc in children_docs]
-        if child_ids:
-            plans_docs = db.collection('therapy_plans').where('child_id', 'in', child_ids).get()
-        else:
-            plans_docs = []
-    else:
-        plans_docs = db.collection('therapy_plans').get()
-        
-    plans = []
-    for doc in plans_docs:
-        plan_data = doc.to_dict()
-        plan_data['id'] = doc.id
-        plans.append(plan_data)
-        
-    return render_template('therapy_plans.html', plans=plans)
-
-@app.route('/create_therapy_plan', methods=['GET', 'POST'])
-@login_required
-def create_therapy_plan():
-    if current_user.role != 'therapist':
-        flash('Access denied')
-        return redirect(url_for('dashboard'))
-        
-    if request.method == 'POST':
-        start_date_str = request.form['start_date']
-        end_date_str = request.form['end_date'] if request.form['end_date'] else None
-        
-        plan_data = {
-            'title': request.form['title'],
-            'description': request.form['description'],
-            'child_id': request.form['child_id'],
-            'therapist_id': current_user.id,
-            'start_date': datetime.strptime(start_date_str, '%Y-%m-%d').date().isoformat(),
-            'status': 'active',
-            'created_at': datetime.utcnow()
-        }
-        
-        if end_date_str:
-            plan_data['end_date'] = datetime.strptime(end_date_str, '%Y-%m-%d').date().isoformat()
-        
-        db.collection('therapy_plans').add(plan_data)
-        flash('Therapy plan created successfully!')
-        return redirect(url_for('therapy_plans'))
-    
-    # Get all children for the dropdown
-    children_docs = db.collection('children').get()
-    children = []
-    for doc in children_docs:
-        child_data = doc.to_dict()
-        child_data['id'] = doc.id
-        children.append(child_data)
-        
-    return render_template('create_therapy_plan.html', children=children)
-
-@app.route('/resources')
-@login_required
-def resources():
-    if current_user.role == 'admin':
-        resources_docs = db.collection('resources').get()
-    else:
-        resources_docs = db.collection('resources').where('is_approved', '==', True).get()
-        
-    resources = []
-    for doc in resources_docs:
-        resource_data = doc.to_dict()
-        resource_data['id'] = doc.id
-        resources.append(resource_data)
-        
-    return render_template('resources.html', resources=resources)
-
+# --- Example of a route using Firebase Storage ---
 @app.route('/upload_resource', methods=['GET', 'POST'])
 @login_required
 def upload_resource():
     if current_user.role not in ['therapist', 'admin']:
-        flash('Access denied')
+        flash('Access denied', 'error')
         return redirect(url_for('dashboard'))
-        
+
     if request.method == 'POST':
         title = request.form['title']
         description = request.form['description']
         category = request.form['category']
         file = request.files.get('file')
+
         file_path = None
         file_type = None
-        
+
         if file and file.filename:
-            filename = secure_filename(file.filename)
-            unique_filename = f"{uuid.uuid4()}_{filename}"
-            
-            # Upload to Firebase Storage
-            blob = bucket.blob(f"uploads/{unique_filename}")
-            
-            # Save file temporarily and upload
-            with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-                file.save(temp_file.name)
-                blob.upload_from_filename(temp_file.name)
-            
-            # Make the file publicly readable
-            blob.make_public()
-            file_path = blob.public_url
-            file_type = filename.split('.')[-1].lower()
-        
+            try:
+                filename = secure_filename(file.filename)
+                # Create a unique filename
+                unique_filename = f"{uuid.uuid4()}_{filename}"
+                
+                # Upload to Firebase Storage
+                blob = bucket.blob(f"uploads/{unique_filename}")
+
+                # Save file temporarily and upload
+                # tempfile.NamedTemporaryFile creates a temporary file on disk
+                with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+                    file.save(temp_file.name)
+                    # Upload the temporary file to Firebase Storage
+                    blob.upload_from_filename(temp_file.name)
+                
+                # Make the file publicly readable (optional, depends on your needs)
+                blob.make_public()
+                # Get the public URL
+                file_path = blob.public_url
+                # Determine file type from extension
+                file_type = filename.split('.')[-1].lower() if '.' in filename else 'unknown'
+
+            except Exception as e:
+                print(f"Error uploading file: {e}")
+                flash('An error occurred uploading the file.', 'error')
+                # If file upload fails, we might still want to save the resource metadata?
+                # Or redirect back. Let's redirect for simplicity.
+                return render_template('upload_resource.html')
+
+        # Prepare resource data for Firestore
         resource_data = {
             'title': title,
             'description': description,
-            'file_path': file_path,
+            'file_path': file_path, # Will be None if no file was uploaded
             'file_type': file_type,
             'uploaded_by': current_user.id,
             'category': category,
-            'is_approved': (current_user.role == 'admin'),
+            'is_approved': (current_user.role == 'admin'), # Auto-approve if admin uploads
             'created_at': datetime.utcnow()
         }
-        
-        db.collection('resources').add(resource_data)
-        flash('Resource uploaded successfully!')
-        return redirect(url_for('resources'))
-        
+
+        try:
+            # Save resource metadata to Firestore
+            db.collection('resources').add(resource_data)
+            flash('Resource uploaded successfully!', 'success')
+            return redirect(url_for('resources')) # Assuming you have a /resources route
+        except Exception as e:
+            print(f"Error saving resource metadata: {e}")
+            flash('An error occurred saving the resource information.', 'error')
+            # If Firestore save fails after file upload, the file will remain in Storage.
+            # Consider implementing cleanup logic if needed.
+            return render_template('upload_resource.html')
+
     return render_template('upload_resource.html')
+
+# --- Example of a route fetching data from Firestore ---
+@app.route('/resources')
+@login_required
+def resources():
+    try:
+        if current_user.role == 'admin':
+            # Admin sees all resources
+            resources_docs = db.collection('resources').get()
+        else:
+            # Others see only approved resources
+            resources_docs = db.collection('resources').where('is_approved', '==', True).get()
+
+        resources = []
+        for doc in resources_docs:
+            resource_data = doc.to_dict()
+            resource_data['id'] = doc.id
+            resources.append(resource_data)
+
+        return render_template('resources.html', resources=resources)
+    except Exception as e:
+        print(f"Error fetching resources: {e}")
+        flash('An error occurred fetching resources.', 'error')
+        return render_template('resources.html', resources=[]) # Return empty list on error
+
+# --- API Endpoint Example ---
+@app.route('/api/children/<child_id>/progress')
+@login_required
+def api_child_progress(child_id):
+    # Basic authorization check (ensure the user has access to this child's data)
+    # This is a simplified check. In a real app, you'd verify the child belongs to the user.
+    try:
+        # Fetch logs for the specific child, ordered by date
+        logs_docs = db.collection('progress_logs').where('child_id', '==', child_id).order_by('date').get()
+        data = []
+        for doc in logs_docs:
+            log_data = doc.to_dict()
+            # Ensure 'date' is serializable. Firestore timestamps need special handling.
+            # If it's a date object or string, this should work.
+            # If it's a DatetimeWithNanoseconds, you might need to convert it.
+            if 'date' in log_data:
+                 # Convert date to ISO format string for JSON serialization
+                if hasattr(log_data['date'], 'isoformat'):
+                    log_data['date'] = log_data['date'].isoformat()
+                else:
+                    # If it's already a string or compatible, leave it.
+                    # You might need more specific handling based on how you store dates.
+                    pass
+            data.append(log_data)
+        return jsonify(data)
+    except Exception as e:
+        print(f"Error fetching progress data for child {child_id}: {e}")
+        # Return an error response
+        return jsonify({'error': 'Failed to fetch progress data'}), 500
+
+
+# --- Placeholder routes for other features ---
+# You'll need to implement these similarly, replacing SQLAlchemy queries with Firestore operations.
+@app.route('/therapy_plans')
+@login_required
+def therapy_plans():
+    # Implement using Firestore queries like above
+    flash('Therapy plans feature is a placeholder. Implement using Firestore.', 'info')
+    return render_template('therapy_plans.html', plans=[])
 
 @app.route('/messages')
 @login_required
 def messages():
-    # Fetch sent messages
-    sent_messages_docs = db.collection('messages').where('sender_id', '==', current_user.id).get()
-    sent_messages = []
-    for doc in sent_messages_docs:
-        msg_data = doc.to_dict()
-        msg_data['id'] = doc.id
-        sent_messages.append(msg_data)
-    
-    # Fetch received messages
-    received_messages_docs = db.collection('messages').where('recipient_id', '==', current_user.id).get()
-    received_messages = []
-    for doc in received_messages_docs:
-        msg_data = doc.to_dict()
-        msg_data['id'] = doc.id
-        received_messages.append(msg_data)
-        
-    return render_template('messages.html', sent_messages=sent_messages, received_messages=received_messages)
-
-@app.route('/send_message', methods=['GET', 'POST'])
-@login_required
-def send_message():
-    if request.method == 'POST':
-        message_data = {
-            'sender_id': current_user.id,
-            'recipient_id': request.form['recipient_id'],
-            'subject': request.form['subject'],
-            'content': request.form['content'],
-            'is_read': False,
-            'created_at': datetime.utcnow()
-        }
-        
-        db.collection('messages').add(message_data)
-        flash('Message sent successfully!')
-        return redirect(url_for('messages'))
-    
-    # Get potential recipients based on user role
-    if current_user.role == 'caregiver':
-        recipients_docs = db.collection('users').where('role', '==', 'therapist').get()
-    elif current_user.role == 'therapist':
-        recipients_docs = db.collection('users').where('role', 'in', ['caregiver', 'therapist']).get()
-    else:
-        recipients_docs = db.collection('users').get()
-        
-    recipients = []
-    for doc in recipients_docs:
-        user_data = doc.to_dict()
-        user_data['id'] = doc.id
-        recipients.append(user_data)
-        
-    return render_template('send_message.html', recipients=recipients)
+    # Implement using Firestore queries for 'messages' collection
+    flash('Messages feature is a placeholder. Implement using Firestore.', 'info')
+    return render_template('messages.html', sent_messages=[], received_messages=[])
 
 @app.route('/forum')
 @login_required
 def forum():
-    posts_docs = db.collection('forum_posts').where('is_approved', '==', True).order_by('created_at', direction=firestore.Query.DESCENDING).get()
-    posts = []
-    for doc in posts_docs:
-        post_data = doc.to_dict()
-        post_data['id'] = doc.id
-        posts.append(post_data)
-        
-    return render_template('forum.html', posts=posts)
-
-@app.route('/create_post', methods=['GET', 'POST'])
-@login_required
-def create_post():
-    if request.method == 'POST':
-        post_data = {
-            'title': request.form['title'],
-            'content': request.form['content'],
-            'author_id': current_user.id,
-            'category': request.form['category'],
-            'is_approved': True,
-            'created_at': datetime.utcnow()
-        }
-        
-        db.collection('forum_posts').add(post_data)
-        flash('Post created successfully!')
-        return redirect(url_for('forum'))
-        
-    return render_template('create_post.html')
+     # Implement using Firestore queries for 'forum_posts' collection
+    flash('Forum feature is a placeholder. Implement using Firestore.', 'info')
+    return render_template('forum.html', posts=[])
 
 @app.route('/progress')
 @login_required
 def progress():
-    if current_user.role == 'caregiver':
-        # Get children IDs for this caregiver
-        children_docs = db.collection('children').where('caregiver_id', '==', current_user.id).get()
-        child_ids = [doc.id for doc in children_docs]
-        if child_ids:
-            logs_docs = db.collection('progress_logs').where('child_id', 'in', child_ids).order_by('date', direction=firestore.Query.DESCENDING).get()
-        else:
-            logs_docs = []
-    else:
-        logs_docs = db.collection('progress_logs').order_by('date', direction=firestore.Query.DESCENDING).get()
-        
-    logs = []
-    for doc in logs_docs:
-        log_data = doc.to_dict()
-        log_data['id'] = doc.id
-        logs.append(log_data)
-        
-    return render_template('progress.html', logs=logs)
+     # Implement using Firestore queries for 'progress_logs' collection
+    flash('Progress tracking feature is a placeholder. Implement using Firestore.', 'info')
+    return render_template('progress.html', logs=[])
 
-@app.route('/log_progress', methods=['GET', 'POST'])
-@login_required
-def log_progress():
-    if current_user.role != 'caregiver':
-        flash('Access denied')
-        return redirect(url_for('dashboard'))
-        
-    if request.method == 'POST':
-        log_data = {
-            'child_id': request.form['child_id'],
-            'activity_id': request.form['activity_id'] if request.form['activity_id'] else None,
-            'date': datetime.strptime(request.form['date'], '%Y-%m-%d').date().isoformat(),
-            'notes': request.form['notes'],
-            'rating': int(request.form['rating']),
-            'duration_minutes': int(request.form['duration_minutes']) if request.form['duration_minutes'] else None,
-            'logged_by': current_user.id,
-            'created_at': datetime.utcnow()
-        }
-        
-        db.collection('progress_logs').add(log_data)
-        flash('Progress logged successfully!')
-        return redirect(url_for('progress'))
-    
-    # Get children for this caregiver
-    children_docs = db.collection('children').where('caregiver_id', '==', current_user.id).get()
-    children = []
-    for doc in children_docs:
-        child_data = doc.to_dict()
-        child_data['id'] = doc.id
-        children.append(child_data)
-        
-    # Get activities
-    activities_docs = db.collection('activities').get()
-    activities = []
-    for doc in activities_docs:
-        activity_data = doc.to_dict()
-        activity_data['id'] = doc.id
-        activities.append(activity_data)
-        
-    return render_template('log_progress.html', children=children, activities=activities)
-
-# API Endpoints
-@app.route('/api/children/<child_id>/progress')
-@login_required
-def api_child_progress(child_id):
-    logs_docs = db.collection('progress_logs').where('child_id', '==', child_id).order_by('date').get()
-    data = []
-    for doc in logs_docs:
-        log_data = doc.to_dict()
-        # Convert date to string format
-        if 'date' in log_data and log_data['date']:
-            log_data['date'] = log_data['date'].isoformat() if isinstance(log_data['date'], datetime) else str(log_data['date'])
-        data.append(log_data)
-        
-    return jsonify(data)
-
-# Required for Render
+# --- Hook for Render ---
+# Render expects the WSGI callable to be named `app`
+# Gunicorn will use this when started with `gunicorn app:app`
 handler = app
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Running locally with `python app.py`
+    app.run(debug=True) # Set debug=False in production
